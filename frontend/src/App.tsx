@@ -6,6 +6,7 @@ import {
   getEntriesByMonth,
   upsertEntry,
   createHabit, updateHabit, toggleHabit, deleteHabit,
+  createCategory, deleteCategory,
 } from './api';
 import { Icons } from './components/Icons';
 import Dashboard from './views/Dashboard';
@@ -140,6 +141,17 @@ export default function App() {
     setHabits(prev => prev.filter(h => h.id !== id));
   };
 
+  const handleAddCategory = async (name: string, color: string) => {
+    const cat = await createCategory({ name, color });
+    setCategories(prev => [...prev, cat]);
+  };
+
+  const handleDeleteCategory = async (id: number) => {
+    await deleteCategory(id);
+    setCategories(prev => prev.filter(c => c.id !== id));
+    setHabits(prev => prev.map(h => h.category_id === id ? { ...h, category_id: null, category: null } : h));
+  };
+
   const activeHabits = habits.filter(h => h.is_active);
   const todayDone = activeHabits.filter(h => (completions[todayKey] ?? []).includes(h.id)).length;
   const allDoneToday = todayDone === activeHabits.length && activeHabits.length > 0;
@@ -158,6 +170,8 @@ export default function App() {
           onEdit={handleEditHabit}
           onToggle={handleToggleHabit}
           onDelete={handleDeleteHabit}
+          onAddCategory={handleAddCategory}
+          onDeleteCategory={handleDeleteCategory}
         />
       );
     }

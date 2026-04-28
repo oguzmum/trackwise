@@ -5,6 +5,12 @@ import { Card, CategoryBadge } from '../components/ui';
 
 const FREQ_OPTIONS = ['daily', '5×/week', '4×/week', '3×/week', 'weekdays'];
 
+const CAT_COLORS = [
+  '#e87c5a', '#f4b942', '#6bcb77', '#4d9de0',
+  '#9b5de5', '#f15bb5', '#00bbf9', '#fe7f2d',
+  '#ff595e', '#52b788', '#e9c46a', '#a8dadc',
+];
+
 interface Props {
   habits: Habit[];
   categories: Category[];
@@ -12,6 +18,8 @@ interface Props {
   onEdit: (id: number, name: string, frequency: string, categoryId: number | null) => Promise<void>;
   onToggle: (id: number) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
+  onAddCategory: (name: string, color: string) => Promise<void>;
+  onDeleteCategory: (id: number) => Promise<void>;
 }
 
 interface FormState {
@@ -20,12 +28,19 @@ interface FormState {
   categoryId: number | null;
 }
 
-export default function Management({ habits, categories, onAdd, onEdit, onToggle, onDelete }: Props) {
+export default function Management({ habits, categories, onAdd, onEdit, onToggle, onDelete, onAddCategory, onDeleteCategory }: Props) {
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [form, setForm] = useState<FormState>({ name: '', frequency: 'daily', categoryId: categories[0]?.id ?? null });
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // Category form state
+  const [showCatForm, setShowCatForm] = useState(false);
+  const [catName, setCatName] = useState('');
+  const [catColor, setCatColor] = useState(CAT_COLORS[0]);
+  const [catConfirmDelete, setCatConfirmDelete] = useState<number | null>(null);
+  const [catSaving, setCatSaving] = useState(false);
 
   const resetForm = () => {
     setForm({ name: '', frequency: 'daily', categoryId: categories[0]?.id ?? null });
@@ -45,6 +60,19 @@ export default function Management({ habits, categories, onAdd, onEdit, onToggle
       resetForm();
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleAddCat = async () => {
+    if (!catName.trim() || catSaving) return;
+    setCatSaving(true);
+    try {
+      await onAddCategory(catName.trim(), catColor);
+      setCatName('');
+      setCatColor(CAT_COLORS[0]);
+      setShowCatForm(false);
+    } finally {
+      setCatSaving(false);
     }
   };
 
@@ -179,6 +207,87 @@ export default function Management({ habits, categories, onAdd, onEdit, onToggle
           </div>
         </>
       )}
+
+      {/* ── Categories ── */}
+      <div style={{ marginTop: 28, borderTop: '1px solid var(--border)', paddingTop: 4 }}>
+        <div style={{ padding: '16px 20px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.09em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Categories</span>
+            <span style={{ fontSize: 10, fontFamily: 'Space Mono, monospace', background: 'var(--bg-elevated)', color: 'var(--text-muted)', borderRadius: 4, padding: '1px 6px' }}>{categories.length}</span>
+          </div>
+          <button
+            onClick={() => setShowCatForm(v => !v)}
+            style={{ background: showCatForm ? 'var(--bg-elevated)' : 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <Icons.Plus size={13} /> New
+          </button>
+        </div>
+
+        {showCatForm && (
+          <div style={{ margin: '0 16px 16px', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 14, padding: '16px 18px' }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12 }}>New Category</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <input
+                placeholder="Category name…"
+                value={catName}
+                onChange={e => setCatName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleAddCat()}
+                autoFocus
+                style={inputStyle}
+              />
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {CAT_COLORS.map(c => (
+                  <button key={c} onClick={() => setCatColor(c)} style={{
+                    width: 28, height: 28, borderRadius: 7, background: c, border: 'none',
+                    cursor: 'pointer', flexShrink: 0,
+                    outline: catColor === c ? `2px solid ${c}` : '2px solid transparent',
+                    outlineOffset: 2,
+                    transform: catColor === c ? 'scale(1.15)' : 'scale(1)',
+                    transition: 'transform 0.12s, outline 0.12s',
+                  }} />
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
+                <button onClick={handleAddCat} disabled={!catName.trim() || catSaving}
+                  style={{ flex: 1, background: catColor, color: '#100f0e', border: 'none', borderRadius: 9, padding: '10px', fontSize: 13, fontWeight: 700, cursor: catName.trim() && !catSaving ? 'pointer' : 'not-allowed', fontFamily: 'inherit', opacity: catName.trim() && !catSaving ? 1 : 0.5 }}>
+                  {catSaving ? 'Saving…' : 'Add Category'}
+                </button>
+                <button onClick={() => { setShowCatForm(false); setCatName(''); setCatColor(CAT_COLORS[0]); }}
+                  style={{ background: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: 9, padding: '10px 14px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {categories.length === 0 && (
+            <div style={{ padding: '12px 0', fontSize: 13, color: 'var(--text-muted)' }}>No categories yet.</div>
+          )}
+          {categories.map(cat => (
+            <Card key={cat.id} style={{ padding: '10px 14px', borderLeft: `3px solid ${cat.color}` }}>
+              {catConfirmDelete === cat.id ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ flex: 1, fontSize: 13, color: 'var(--accent-coral)' }}>Delete "{cat.name}"?</span>
+                  <button onClick={() => { onDeleteCategory(cat.id); setCatConfirmDelete(null); }}
+                    style={{ background: 'var(--accent-coral)', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Delete</button>
+                  <button onClick={() => setCatConfirmDelete(null)}
+                    style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: 7, padding: '6px 10px', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 10, height: 10, borderRadius: 3, background: cat.color, flexShrink: 0 }} />
+                  <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{cat.name}</span>
+                  <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'Space Mono, monospace' }}>
+                    {habits.filter(h => h.category_id === cat.id).length} habit{habits.filter(h => h.category_id === cat.id).length !== 1 ? 's' : ''}
+                  </span>
+                  <IconBtn onClick={() => setCatConfirmDelete(cat.id)} title="Delete" danger><Icons.Trash size={15} /></IconBtn>
+                </div>
+              )}
+            </Card>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

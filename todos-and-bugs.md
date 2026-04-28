@@ -1,6 +1,6 @@
 # ToDos
 
-- [ ] I need to be able to create categories; or define default ones and let the user live with that :D
+- [x] I need to be able to create categories; or define default ones and let the user live with that :D
 
 ## Image Recognition and OCR
 
