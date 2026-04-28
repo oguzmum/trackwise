@@ -25,6 +25,11 @@ uvicorn app.main:app --reload
 API docs available at [http://localhost:8000/docs](http://localhost:8000/docs).  
 DB (`trackwise.db`) is created automatically on first start.
 
+**Frontend**
+```bash
+cd frontend && npm run dev
+```
+
 **Tests:**
 
 ```bash
