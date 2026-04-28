@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Trackwise</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js" crossorigin="anonymous"></script>
+  <script>
+    // Suppress generic cross-origin "Script error." noise — app renders correctly
+    window.addEventListener('error', function(e) {
+      if (e.message === 'Script error.' && !e.filename) e.stopImmediatePropagation();
+    }, true);
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-base:        #100f0e;
+      --bg-surface:     #1c1a18;
+      --bg-elevated:    #252320;
+      --border:         #2e2c28;
+      --border-strong:  #44403a;
+      --text-primary:   #f0ebe3;
+      --text-secondary: #b0a89e;
+      --text-muted:     #6e6860;
+      --accent-amber:   #4d6fe3;
+      --accent-coral:   #c9614a;
+      --accent-sage:    #6a9e7a;
+      --accent-sky:     #4a8fa8;
+    }
+
+    html, body { height: 100%; background: var(--bg-base); color: var(--text-primary); }
+    body { font-family: 'Space Grotesk', sans-serif; -webkit-font-smoothing: antialiased; }
+
+    #root { height: 100%; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+
+    /* Sidebar: desktop only */
+    .sidebar   { display: flex; }
+    .bottomnav { display: none; }
+
+    @media (max-width: 680px) {
+      .sidebar   { display: none !important; }
+      .bottomnav { display: flex !important; }
+      main       { padding-bottom: 80px !important; max-width: 100% !important; }
+    }
+
+    /* Ripple animation */
+    @keyframes rippleOut {
+      0%   { transform: scale(1);   opacity: 0.6; }
+      100% { transform: scale(18);  opacity: 0; }
+    }
+
+    /* Input focus ring */
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--accent-amber) !important;
+      box-shadow: 0 0 0 2px var(--accent-amber)22;
+    }
+
+    button:active { opacity: 0.8; }
+  </style>
+
+  <script src="data.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel" src="shared.jsx"></script>
+  <script type="text/babel" src="Dashboard.jsx"></script>
+  <script type="text/babel" src="CheckIn.jsx"></script>
+  <script type="text/babel" src="Management.jsx"></script>
+  <script type="text/babel" src="Statistics.jsx"></script>
+  <script type="text/babel" src="MonthlyGrid.jsx"></script>
+  <script type="text/babel" src="App.jsx"></script>
+</body>
+</html>
