@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Completions, Habit } from '../types';
+import { localDateKey } from '../utils';
 import { Icons } from '../components/Icons';
 
 interface Props {
@@ -15,7 +16,6 @@ export default function MonthlyGrid({ habits, completions, onToggle, onMonthChan
   const [month, setMonth] = useState(now.getMonth());
 
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const monthName = new Date(year, month, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   const activeHabits = habits.filter(h => h.is_active);
@@ -39,7 +39,7 @@ export default function MonthlyGrid({ habits, completions, onToggle, onMonthChan
   const dateKey = (day: number) =>
     `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
   const isFuture = (day: number) => new Date(year, month, day) > today;
-  const isToday = (day: number) => dateKey(day) === today.toISOString().slice(0, 10);
+  const isToday = (day: number) => dateKey(day) === localDateKey(today);
 
   const habitRate = (habitId: number) => {
     const daysSoFar = (year === today.getFullYear() && month === today.getMonth())

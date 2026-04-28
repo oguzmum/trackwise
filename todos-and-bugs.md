@@ -10,7 +10,7 @@
 
 # Bugs
 
-- [ ] wrong date is used. UI shows yesterday as today (maybe a timezone issue?)
+- [x] wrong date is used. UI shows yesterday as today (maybe a timezone issue?)
 
 ## Statistics
 - [ ] Weekly completion rate doesn't work

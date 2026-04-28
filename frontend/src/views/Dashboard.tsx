@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import type { Completions, Habit } from '../types';
+import { localDateKey } from '../utils';
 import { Icons } from '../components/Icons';
 import { Card, CategoryBadge, CircleProgress, ProgressBar } from '../components/ui';
 
@@ -11,8 +12,7 @@ interface Props {
 
 export default function Dashboard({ habits, completions, onNavigate }: Props) {
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayKey = today.toISOString().slice(0, 10);
+  const todayKey = localDateKey(today);
 
   const activeHabits = habits.filter(h => h.is_active);
 
@@ -52,7 +52,7 @@ export default function Dashboard({ habits, completions, onNavigate }: Props) {
     }
     let streak = 0;
     while (streak < 365) {
-      const k = d.toISOString().slice(0, 10);
+      const k = localDateKey(d);
       if ((completions[k] ?? []).includes(habitId)) {
         streak++;
         d.setDate(d.getDate() - 1);

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { localDateKey } from '../utils';
 import {
   LineChart, Line, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip,
@@ -45,7 +46,7 @@ export default function Statistics({ habits }: Props) {
 
   // Weekly completion data from heatmap
   const weeklyData = useMemo(() => {
-    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const today = new Date();
     const weeks = range === '4w' ? 4 : range === '8w' ? 8 : 12;
     const result = [];
     for (let w = weeks - 1; w >= 0; w--) {
@@ -56,7 +57,7 @@ export default function Statistics({ habits }: Props) {
         const date = new Date(weekStart);
         date.setDate(weekStart.getDate() + d);
         if (date > today) break;
-        const key = date.toISOString().slice(0, 10);
+        const key = localDateKey(date);
         total++;
         if (heatmapByDate[key]) done++;
       }
@@ -71,14 +72,14 @@ export default function Statistics({ habits }: Props) {
 
   // 91-day heatmap cells
   const heatmapCells = useMemo(() => {
-    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const today = new Date();
     const cells: { key: string; date: Date; done: boolean; isFuture: boolean; col: number; row: number }[] = [];
     const start = new Date(today);
     start.setDate(today.getDate() - today.getDay() - 12 * 7);
     for (let i = 0; i < 91; i++) {
       const date = new Date(start);
       date.setDate(start.getDate() + i);
-      const key = date.toISOString().slice(0, 10);
+      const key = localDateKey(date);
       const isFuture = date > today;
       cells.push({ key, date, done: !isFuture && !!heatmapByDate[key], isFuture, col: Math.floor(i / 7), row: i % 7 });
     }

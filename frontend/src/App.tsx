@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Category, Completions, Habit } from './types';
+import { localDateKey } from './utils';
 import {
   getCategories, getHabits,
   getEntriesByMonth,
@@ -44,8 +45,7 @@ export default function App() {
   const loadedMonths = useRef(new Set<string>());
 
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayKey = today.toISOString().slice(0, 10);
+  const todayKey = localDateKey(today);
 
   // Initial load
   useEffect(() => {

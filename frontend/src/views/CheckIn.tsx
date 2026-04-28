@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import type { Completions, Habit } from '../types';
+import { localDateKey } from '../utils';
 import { Icons } from '../components/Icons';
 import { CategoryBadge, ProgressBar } from '../components/ui';
 
@@ -12,8 +13,7 @@ interface Props {
 
 export default function CheckIn({ habits, completions, onToggle, onNote }: Props) {
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayKey = today.toISOString().slice(0, 10);
+  const todayKey = localDateKey(today);
   const activeHabits = habits.filter(h => h.is_active);
 
   const [notes, setNotes] = useState<Record<number, string>>({});
