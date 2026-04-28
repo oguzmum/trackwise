@@ -13,6 +13,12 @@ A personal habit tracking web app with statistics and visual insights.
 
 ## Setup & Run
 
+Use the start script :D
+
+```bash
+./start-app.sh
+```
+
 **Backend** (Python 3.11+):
 
 ```bash
