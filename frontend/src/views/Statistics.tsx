@@ -40,7 +40,7 @@ export default function Statistics({ habits }: Props) {
   // Build a date→count lookup from heatmap entries
   const heatmapByDate = useMemo(() => {
     const m: Record<string, number> = {};
-    heatmapEntries.forEach(e => { m[e.date] = e.count; });
+    heatmapEntries.forEach(e => { m[e.date] = e.completed ? 1 : 0; });
     return m;
   }, [heatmapEntries]);
 

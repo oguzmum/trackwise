@@ -34,7 +34,7 @@ export interface HabitStats {
 
 export interface HeatmapEntry {
   date: string;
-  count: number;
+  completed: boolean;
 }
 
 export interface HeatmapData {
