@@ -39,3 +39,7 @@ frontend/.env.*.local
 
 # Claude
 .claude
+
+# images
+tracker-table-images/*
+!tracker-table-images/from-web*
