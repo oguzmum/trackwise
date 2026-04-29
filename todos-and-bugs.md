@@ -13,6 +13,6 @@
 - [x] wrong date is used. UI shows yesterday as today (maybe a timezone issue?)
 
 ## Statistics
-- [ ] Weekly completion rate doesn't work
-- [ ] day completed per week doesn't work
-- [ ] 90 day heatmap doesn't work
+- [x] Weekly completion rate doesn't work
+- [x] day completed per week doesn't work
+- [x] 90 day heatmap doesn't work
