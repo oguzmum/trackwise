@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Optional
 import cv2
 import numpy as np
+import math
 
 # ---------------------------------------------------------------------------
 # Data structures
@@ -135,6 +136,43 @@ def extract_line_positions(line_mask: np.ndarray, axis: int, min_gap: int = 10) 
             merged[-1] = (merged[-1] + p) // 2
     return merged
 
+# ---------------------------------------------------------------------------
+# Detect mark in cell
+# ---------------------------------------------------------------------------
+
+def preprocess_for_mark_detection(cell_img: np.ndarray):
+    if cell_img is None or cell_img.size == 0:
+        return False, 0.0, []
+
+    gray = cv2.cvtColor(cell_img, cv2.COLOR_BGR2GRAY)
+
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+    
+    return cv2.Canny(blurred, 50, 150)
+
+def detect_mark_in_cell(cell_img: np.ndarray, min_line_len_ratio: float = 0.6) -> tuple[bool, float, list]:
+    h, w = cell_img.shape[:2]
+    min_line_len = int(h * min_line_len_ratio)
+    lines = cv2.HoughLinesP(cell_img, 1, np.pi/180, threshold=30, minLineLength=min_line_len, maxLineGap=10)
+    
+    valid_lines = []
+    if lines is not None:
+        for line in lines:
+            x1, y1, x2, y2 = line[0]
+            dx, dy = x2 - x1, y2 - y1
+            angle = math.degrees(math.atan2(abs(dy), abs(dx)))
+            
+            if 10 < angle < 80:
+                valid_lines.append((x1, y1, x2, y2))
+
+    has_mark = len(valid_lines) >= 2
+    confidence = min(1.0, len(valid_lines) / 4.0)
+    
+    return has_mark, float(confidence), valid_lines
+
+# ---------------------------------------------------------------------------
+# Visualization Functions
+# ---------------------------------------------------------------------------
 
 def draw_grid(
     img: np.ndarray,
