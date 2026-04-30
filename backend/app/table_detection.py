@@ -180,17 +180,89 @@ def detect_mark_in_cell(cell_img: np.ndarray) -> tuple[bool, float, list]:
     return has_mark, float(confidence), valid_lines
 
 # ---------------------------------------------------------------------------
+# Table detection pipeline
+# ---------------------------------------------------------------------------
+
+def detect_table_pipeline(image_path: str | Path, max_image_dim: int = 1800, min_gap_rows: int = 10, min_gap_cols: int = 8) -> TableDetectionResult:
+    try:
+        img = load_image(image_path)
+    except ValueError as e:
+        return TableDetectionResult(
+            success=False, n_rows=0, n_cols=0,
+            row_positions=[], col_positions=[],
+            cells=[], habit_names=[], error=str(e),
+        )
+
+    img = resize_to_max(img, max_image_dim)
+    binary = preprocess(img)
+    h_lines, v_lines = detect_grid_lines(binary)
+
+    row_positions = extract_line_positions(h_lines, axis=1, min_gap=min_gap_rows)
+    col_positions = extract_line_positions(v_lines, axis=0, min_gap=min_gap_cols)
+
+    if len(row_positions) < 2 or len(col_positions) < 2:
+        return TableDetectionResult(
+            success=False, n_rows=0, n_cols=0,
+            row_positions=row_positions, col_positions=col_positions,
+            cells=[], habit_names=[],
+            error=(
+                f"Too few grid lines detected: "
+                f"{len(row_positions)} horizontal, {len(col_positions)} vertical"
+            ),
+        )
+
+    n_rows = len(row_positions) - 1
+    n_cols = len(col_positions) - 1
+
+    cells: list[CellResult] = []
+    for r in range(n_rows):
+        y1, y2 = row_positions[r], row_positions[r + 1]
+        for c in range(n_cols):
+            x1, x2 = col_positions[c], col_positions[c + 1]
+            if c == 0:
+                cells.append(CellResult(row=r, col=c, has_mark=False, confidence=0.0))
+            else:
+                has_mark, conf, _ = detect_mark_in_cell(img[y1:y2, x1:x2])
+                cells.append(CellResult(row=r, col=c, has_mark=has_mark, confidence=conf))
+
+	# here OCR later
+    habit_names = 'habit name XYZ :D'
+
+    return TableDetectionResult(
+        success=True,
+        n_rows=n_rows,
+        n_cols=n_cols,
+        row_positions=row_positions,
+        col_positions=col_positions,
+        cells=cells,
+        habit_names=habit_names,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Visualization Functions
 # ---------------------------------------------------------------------------
 
-def draw_grid(
-    img: np.ndarray,
-    result: TableDetectionResult,
-    color: tuple[int, int, int] = (0, 200, 0),
-) -> np.ndarray:
+def draw_grid(img: np.ndarray, result: TableDetectionResult, color: tuple[int, int, int] = (0, 200, 0),) -> np.ndarray:
     out = img.copy()
     for y_coordinate in result.row_positions:
         cv2.line(out, (0, y_coordinate), (out.shape[1], y_coordinate), color, 1)
     for x_coordinate in result.col_positions:
         cv2.line(out, (x_coordinate, 0), (x_coordinate, out.shape[0]), color, 1)
+    return out
+
+
+def draw_marks(img: np.ndarray, result: TableDetectionResult) -> np.ndarray:
+    out = img.copy()
+    overlay = out.copy()
+    rp, cp = result.row_positions, result.col_positions
+
+    for cell in result.cells:
+        if not cell.has_mark:
+            continue
+        r, c = cell.row, cell.col
+        if r + 1 < len(rp) and c + 1 < len(cp):
+            cv2.rectangle(overlay, (cp[c], rp[r]), (cp[c + 1], rp[r + 1]), (0, 100, 255), -1)
+
+    cv2.addWeighted(overlay, 0.35, out, 0.65, 0, out)
     return out
