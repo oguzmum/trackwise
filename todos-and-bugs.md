@@ -11,6 +11,10 @@
   - [ ] recognize on which day which habit was done
   - [ ] save the habit entries in the db
   - [ ] have an archive of used images and it's outcomes - also make it editable afterwards
+  - [ ] ..
+  - [ ] warp perspective
+  - [ ] skip first row as it is the dates normally
+
 
 ---
 
