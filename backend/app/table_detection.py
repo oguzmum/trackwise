@@ -59,8 +59,36 @@ def detect_grid_lines(binary: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     v_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, v_size))
     v_lines = cv2.morphologyEx(binary_closed, cv2.MORPH_OPEN, v_kernel)
     
-    # the lines (add some more pixels)
+    # add some more pixels to the line (make them thicker)
     # h_lines = cv2.dilate(h_lines, np.ones((3, 3), np.uint8), iterations=1)
     # v_lines = cv2.dilate(v_lines, np.ones((3, 3), np.uint8), iterations=1)
 
     return h_lines, v_lines
+
+
+def extract_line_positions(line_mask: np.ndarray, axis: int, min_gap: int = 10) -> list[int]:
+    # count all pixels on the axis (don't need to divide by 255 as the image is black-and-white)
+    projection = line_mask.sum(axis=axis)
+    line_length_max = line_mask.shape[axis] 
+    threshold = line_length_max * 0.25
+    active = projection > threshold
+
+    raw: list[int] = []
+    i, n = 0, len(active)
+    while i < n:
+        if active[i]:
+            start = i
+            while i < n and active[i]:
+                i += 1
+            raw.append((start + i - 1) // 2)
+        else:
+            i += 1
+
+    # Merge positions closer than min_gap
+    merged: list[int] = []
+    for p in raw:
+        if not merged or p - merged[-1] > min_gap:
+            merged.append(p)
+        else:
+            merged[-1] = (merged[-1] + p) // 2
+    return merged
