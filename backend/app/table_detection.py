@@ -1,6 +1,48 @@
+from dataclasses import dataclass
+
 from pathlib import Path
+from typing import Optional
 import cv2
 import numpy as np
+
+# ---------------------------------------------------------------------------
+# Data structures
+# ---------------------------------------------------------------------------
+
+@dataclass
+class CellResult:
+    row: int
+    col: int
+    has_mark: bool
+    confidence: float
+
+@dataclass
+class TableDetectionResult:
+    success: bool
+    n_rows: int
+    n_cols: int
+    row_positions: list[int]
+    col_positions: list[int]
+    cells: list[CellResult]
+    habit_names: list[str] # later for OCR
+    error: Optional[str] = None
+
+    def marks_for_given_row(self, row: int) -> list[bool]:
+        return [cell.has_mark for cell in self.cells if cell.row == row and cell.col > 0]
+
+    def as_matrix(self) -> np.ndarray:
+        """Return a boolean matrix [n_rows x (n_cols-1)] of mark values."""
+        if self.n_rows == 0 or self.n_cols <= 1:
+            return np.zeros((0, 0), dtype=bool)
+        mat = np.zeros((self.n_rows, self.n_cols - 1), dtype=bool)
+        for cell in self.cells:
+            if cell.col > 0:
+                mat[cell.row, cell.col - 1] = cell.has_mark
+        return mat
+
+# ---------------------------------------------------------------------------
+# Functions
+# ---------------------------------------------------------------------------
 
 def load_image(image_path: str | Path) -> np.ndarray:
     img = cv2.imread(str(image_path))
@@ -67,10 +109,10 @@ def detect_grid_lines(binary: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
 
 
 def extract_line_positions(line_mask: np.ndarray, axis: int, min_gap: int = 10) -> list[int]:
-    # count all pixels on the axis (don't need to divide by 255 as the image is black-and-white)
-    projection = line_mask.sum(axis=axis)
+    # count all pixels on the axis (divide by 255 to get the actual pixel count (white 255, black 0), the sum counts the intensity, not the pixel value)
+    projection = line_mask.sum(axis=axis) / 255
     line_length_max = line_mask.shape[axis] 
-    threshold = line_length_max * 0.25
+    threshold = line_length_max * 0.26 # TODO maybe calucate this dynamically
     active = projection > threshold
 
     raw: list[int] = []
@@ -92,3 +134,16 @@ def extract_line_positions(line_mask: np.ndarray, axis: int, min_gap: int = 10) 
         else:
             merged[-1] = (merged[-1] + p) // 2
     return merged
+
+
+def draw_grid(
+    img: np.ndarray,
+    result: TableDetectionResult,
+    color: tuple[int, int, int] = (0, 200, 0),
+) -> np.ndarray:
+    out = img.copy()
+    for y_coordinate in result.row_positions:
+        cv2.line(out, (0, y_coordinate), (out.shape[1], y_coordinate), color, 1)
+    for x_coordinate in result.col_positions:
+        cv2.line(out, (x_coordinate, 0), (x_coordinate, out.shape[0]), color, 1)
+    return out
