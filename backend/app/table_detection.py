@@ -42,3 +42,25 @@ def preprocess(img: np.ndarray) -> np.ndarray:
     binary_removed_isolated_noise_pixels = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel)
     
     return binary_removed_isolated_noise_pixels
+
+
+def detect_grid_lines(binary: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    h, w = binary.shape
+
+    kernel_to_close_small_gaps = np.ones((2, 2), np.uint8)
+    binary_closed = cv2.dilate(binary, kernel_to_close_small_gaps, iterations=1)
+
+    h_size = max(w // 30, 20) 
+    h_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (h_size, 1))
+    # MORPH_OPEN to remove everything that is smaller than the kernel
+    h_lines = cv2.morphologyEx(binary_closed, cv2.MORPH_OPEN, h_kernel)
+    
+    v_size = max(h // 30, 20)
+    v_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, v_size))
+    v_lines = cv2.morphologyEx(binary_closed, cv2.MORPH_OPEN, v_kernel)
+    
+    # the lines (add some more pixels)
+    # h_lines = cv2.dilate(h_lines, np.ones((3, 3), np.uint8), iterations=1)
+    # v_lines = cv2.dilate(v_lines, np.ones((3, 3), np.uint8), iterations=1)
+
+    return h_lines, v_lines
