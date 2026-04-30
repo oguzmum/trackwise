@@ -43,3 +43,4 @@ frontend/.env.*.local
 # images
 tracker-table-images/*
 !tracker-table-images/from-web*
+!tracker-table-images/photo-edited*
