@@ -28,3 +28,9 @@
 - [x] Weekly completion rate doesn't work
 - [x] day completed per week doesn't work
 - [x] 90 day heatmap doesn't work
+
+
+## Tracker Scan
+
+- [ ] in the example-tracker.png the last column is like a total sum.. but the tracker detects it as a day..
+  - [ ] also the table taht is created before saving the results shows it.. but the days are labeled 1 to 31.. so something is wrong there... 

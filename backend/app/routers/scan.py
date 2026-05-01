@@ -56,7 +56,7 @@ async def scan_image(file: UploadFile = File(...)):
                 error=result.error,
             )
 
-        n_data_cols = result.n_cols - 1
+        n_data_cols = min(result.n_cols - 1, 31)
         marks_matrix: list[list[bool]] = []
         for row_idx in range(len(result.habit_names)):
             actual_row = row_idx + 1
