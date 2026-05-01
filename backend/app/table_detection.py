@@ -93,7 +93,7 @@ def detect_grid_lines(binary: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     kernel_to_close_small_gaps = np.ones((2, 2), np.uint8)
     binary_closed = cv2.dilate(binary, kernel_to_close_small_gaps, iterations=1)
 
-    h_size = max(w // 30, 20) 
+    h_size = max(w // 60, 20)
     h_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (h_size, 1))
     # MORPH_OPEN to remove everything that is smaller than the kernel
     h_lines = cv2.morphologyEx(binary_closed, cv2.MORPH_OPEN, h_kernel)
@@ -215,7 +215,7 @@ def detect_table_pipeline(image_path: str | Path, max_image_dim: int = 1800, min
     n_cols = len(col_positions) - 1
 
     cells: list[CellResult] = []
-    for r in range(n_rows):
+    for r in range(1, n_rows):
         y1, y2 = row_positions[r], row_positions[r + 1]
         for c in range(n_cols):
             x1, x2 = col_positions[c], col_positions[c + 1]
