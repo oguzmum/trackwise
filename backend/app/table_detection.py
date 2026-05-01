@@ -212,6 +212,17 @@ def detect_table_pipeline(image_path: str | Path, max_image_dim: int = 1800, min
             ),
         )
 
+    # If the table has no left border, the first detected vertical line is the
+    # separator between habit names and day 1 — not the table's left edge.
+    # Heuristic: if the first column is not significantly wider than the average
+    # of the remaining columns, there is no habit-name column with a left border,
+    # so we inject a virtual left boundary at x=0.
+    if len(col_positions) >= 3:
+        first_col_width = col_positions[1] - col_positions[0]
+        avg_remaining_width = (col_positions[-1] - col_positions[1]) / max(1, len(col_positions) - 2)
+        if avg_remaining_width > 0 and first_col_width < avg_remaining_width * 2.0:
+            col_positions.insert(0, 0)
+
     n_rows = len(row_positions) - 1
     n_cols = len(col_positions) - 1
 
