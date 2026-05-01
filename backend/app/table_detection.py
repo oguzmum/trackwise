@@ -5,6 +5,7 @@ from typing import Optional
 import cv2
 import numpy as np
 import math
+import re
 
 # ---------------------------------------------------------------------------
 # Data structures
@@ -225,8 +226,7 @@ def detect_table_pipeline(image_path: str | Path, max_image_dim: int = 1800, min
                 has_mark, conf, _ = detect_mark_in_cell(img[y1:y2, x1:x2])
                 cells.append(CellResult(row=r, col=c, has_mark=has_mark, confidence=conf))
 
-	# here OCR later
-    habit_names = 'habit name XYZ :D'
+    habit_names = extract_habit_names(img, row_positions, col_positions)
 
     return TableDetectionResult(
         success=True,
@@ -238,6 +238,62 @@ def detect_table_pipeline(image_path: str | Path, max_image_dim: int = 1800, min
         habit_names=habit_names,
     )
 
+
+# ---------------------------------------------------------------------------
+# OCR for habit names
+# ---------------------------------------------------------------------------
+
+def extract_habit_names(img: np.ndarray, row_positions: list[int], col_positions: list[int],) -> list[str]:
+    try:
+        import pytesseract
+    except ImportError:
+        return [""] * max(0, len(row_positions) - 1)
+
+    if len(col_positions) < 2:
+        return []
+
+	# first column only
+    x1, x2 = col_positions[0], col_positions[1]
+    names: list[str] = []
+
+    for r in range(1, len(row_positions) - 1):
+        y1, y2 = row_positions[r], row_positions[r + 1]
+        cell = img[y1:y2, x1:x2]
+
+        if cell.size == 0 or cell.shape[0] < 5 or cell.shape[1] < 5:
+            names.append("")
+            continue
+
+
+		# PreCheck if the cell is even "readable" (enoguh black density)
+        gray_cell = cv2.cvtColor(cell, cv2.COLOR_BGR2GRAY) if len(cell.shape) == 3 else cell
+        # make text white and background black
+        _, binary = cv2.threshold(gray_cell, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+        
+        density = np.sum(binary == 255) / binary.size
+        if density < 0.01: 
+            names.append("")
+            continue
+
+        # scale up small cells for better OCR accuracy
+        if cell.shape[0] < 50:
+            scale = 60 / cell.shape[0]
+            cell = cv2.resize(cell, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+
+        # PSM 7 = treat as a single text line
+		# oem 3 = Use the best available engine (Default/LSTM mix)
+		# c = Flag to set internal configuration variables
+		# tessedit_char_blacklist = List of forbidden characters (filters out line artifacts)
+        custom_config = r'--psm 7 --oem 3 -c tessedit_char_blacklist=|=_~'
+        text = pytesseract.image_to_string(cell, config=custom_config).strip()
+        
+        text = re.sub(r'[^a-zA-ZäöüÄÖÜ0-9\s]', '', text) 
+        text = text.strip()
+        if len(text) < 3:
+            text = ""
+        names.append(text)
+
+    return names
 
 # ---------------------------------------------------------------------------
 # Visualization Functions
