@@ -14,8 +14,9 @@ import CheckIn from './views/CheckIn';
 import MonthlyGrid from './views/MonthlyGrid';
 import Statistics from './views/Statistics';
 import Management from './views/Management';
+import ScanImport from './views/ScanImport';
 
-type View = 'dashboard' | 'checkin' | 'monthly' | 'stats' | 'manage';
+type View = 'dashboard' | 'checkin' | 'monthly' | 'stats' | 'manage' | 'scan';
 
 const VIEWS: { id: View; label: string; Icon: (p: { size: number }) => JSX.Element }[] = [
   { id: 'dashboard', label: 'Home',    Icon: p => <Icons.Home {...p} /> },
@@ -23,6 +24,7 @@ const VIEWS: { id: View; label: string; Icon: (p: { size: number }) => JSX.Eleme
   { id: 'monthly',   label: 'Tracker', Icon: p => <Icons.Grid {...p} /> },
   { id: 'stats',     label: 'Stats',   Icon: p => <Icons.Chart {...p} /> },
   { id: 'manage',    label: 'Habits',  Icon: p => <Icons.Settings {...p} /> },
+  { id: 'scan',      label: 'Scan',    Icon: p => <Icons.Camera {...p} /> },
 ];
 
 function toMonthKey(year: number, month: number) {
@@ -162,6 +164,7 @@ export default function App() {
       case 'checkin':   return <CheckIn habits={habits} completions={completions} onToggle={handleToggle} onNote={handleNote} />;
       case 'monthly':   return <MonthlyGrid habits={habits} completions={completions} onToggle={handleToggle} onMonthChange={loadMonth} />;
       case 'stats':     return <Statistics habits={habits} />;
+      case 'scan':      return <ScanImport />;
       case 'manage':    return (
         <Management
           habits={habits}

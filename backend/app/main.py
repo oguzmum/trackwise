@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .database import engine, Base
-from .routers import habits, entries, categories, stats
+from .routers import habits, entries, categories, stats, scan
 
 Base.metadata.create_all(bind=engine)
 
@@ -19,3 +19,4 @@ app.include_router(categories.router, prefix="/api/categories", tags=["categorie
 app.include_router(habits.router, prefix="/api/habits", tags=["habits"])
 app.include_router(entries.router, prefix="/api/entries", tags=["entries"])
 app.include_router(stats.router, prefix="/api/stats", tags=["stats"])
+app.include_router(scan.router, prefix="/api/scan", tags=["scan"])

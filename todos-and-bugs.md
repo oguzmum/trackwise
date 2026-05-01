@@ -5,7 +5,7 @@
 ## Image Recognition and OCR
 
 - [ ] Allow user to upload or photograph a paper habit tracker: use OCR + image recognition to parse the grid (habits × days) and auto-import the completed entries into the database
-  - [ ] upload image
+  - [x] upload image
   - [x] recognize table pattern in the image
   - [ ] recognize the habit in each line
     - [x] recognize habit name via OCR

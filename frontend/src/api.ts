@@ -1,4 +1,4 @@
-import type { Category, Entry, Habit, HabitStats, HeatmapData } from './types';
+import type { Category, Entry, Habit, HabitStats, HeatmapData, ScanResult } from './types';
 
 const BASE = '/api';
 
@@ -38,6 +38,14 @@ export const upsertEntry = (data: { habit_id: number; date: string; completed: b
   req<Entry>('POST', '/entries/', data);
 export const patchEntry = (id: number, data: { completed?: boolean; note?: string }) =>
   req<Entry>('PATCH', `/entries/${id}`, data);
+
+export const scanImage = async (file: File): Promise<ScanResult> => {
+  const fd = new FormData();
+  fd.append('file', file);
+  const res = await fetch(`${BASE}/scan/`, { method: 'POST', body: fd });
+  if (!res.ok) throw new Error(`POST /api/scan/ → ${res.status}`);
+  return res.json() as Promise<ScanResult>;
+};
 
 // Stats
 export const getHabitStats = (id: number, period: 'month' | 'quarter' | 'year' = 'month') =>

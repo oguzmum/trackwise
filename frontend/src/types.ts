@@ -45,3 +45,13 @@ export interface HeatmapData {
 
 // {dateKey: completedHabitId[]}
 export type Completions = Record<string, number[]>;
+
+export interface ScanResult {
+  success: boolean;
+  n_rows: number;
+  n_cols: number;
+  habit_names: string[];
+  marks_matrix: boolean[][];
+  result_image?: string;
+  error?: string;
+}
