@@ -220,7 +220,7 @@ def detect_table_pipeline(image_path: str | Path, max_image_dim: int = 1800, min
     col_positions = fix_missing_left_border(col_positions)
 
     n_rows = len(row_positions) - 1
-    n_cols = len(col_positions) - 1
+    n_cols = min(32, len(col_positions) - 1)
 
     cells: list[CellResult] = []
     for r in range(1, n_rows):
