@@ -16,11 +16,15 @@
 - [ ] When a habit is selected in the drop down menu, replace the habit name in the table text field
 - [x] save the habit entries in the db
 - [x] if the habit is not yet in the DB, create a new one (or at least give a dialog where the user can manually adjust some things)
-- [ ] match the monthand year for which the scanned image should be applied
-  - [ ] also limit the days that can be added accordingly
+- [x] match the month and year for which the scanned image should be applied
+  - [x] also limit the days that can be added accordingly
 
 ## Scanned Images
 - [ ] have an archive of used images and it's outcomes - also make it editable afterwards
+
+## Deployment
+- [ ] create docker files to run the app as docker container
+- [ ] create github actions to create a new docker image on every push
 
 ---
 
