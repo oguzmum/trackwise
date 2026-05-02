@@ -12,6 +12,9 @@ interface TableRow {
 
 type Phase = 'upload' | 'loading' | 'result';
 
+// Total cols = 1 (grip) + 1 (habit) + nDataCols + 1 (+col) + 1 (delete row) = nDataCols + 4
+const EXTRA_COLS = 4;
+
 export default function ScanImport() {
   const [phase, setPhase] = useState<Phase>('upload');
   const [error, setError] = useState<string | null>(null);
@@ -20,6 +23,18 @@ export default function ScanImport() {
   const [rows, setRows] = useState<TableRow[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+
+  // hover state
+  const [hoveredCol, setHoveredCol] = useState<number | null>(null);
+  const [hoveredRow, setHoveredRow] = useState<number | null>(null);
+
+  // drag state
+  const [dragRow, setDragRow] = useState<number | null>(null);
+  const [dragOverRow, setDragOverRow] = useState<number | null>(null);
+  const [dragCol, setDragCol] = useState<number | null>(null);
+  const [dragOverCol, setDragOverCol] = useState<number | null>(null);
+
+  const nDataCols = rows[0]?.marks.length ?? 0;
 
   const processFile = useCallback(async (file: File) => {
     setError(null);
@@ -95,10 +110,45 @@ export default function ScanImport() {
     setRows(prev => prev.map(r => ({ ...r, marks: [...r.marks, false] })));
   };
 
-  const [hoveredCol, setHoveredCol] = useState<number | null>(null);
-  const [hoveredRow, setHoveredRow] = useState<number | null>(null);
+  // row drag handlers
+  const onRowDragStart = (i: number) => setDragRow(i);
+  const onRowDragOver = (i: number, e: React.DragEvent) => {
+    e.preventDefault();
+    if (dragRow !== null) setDragOverRow(i);
+  };
+  const onRowDrop = (targetIdx: number) => {
+    if (dragRow !== null && dragRow !== targetIdx) {
+      setRows(prev => {
+        const next = [...prev];
+        const [moved] = next.splice(dragRow, 1);
+        next.splice(targetIdx, 0, moved);
+        return next;
+      });
+    }
+    setDragRow(null);
+    setDragOverRow(null);
+  };
+  const onRowDragEnd = () => { setDragRow(null); setDragOverRow(null); };
 
-  const nDataCols = rows[0]?.marks.length ?? 0;
+  // column drag handlers
+  const onColDragStart = (i: number) => setDragCol(i);
+  const onColDragOver = (i: number, e: React.DragEvent) => {
+    e.preventDefault();
+    if (dragCol !== null) setDragOverCol(i);
+  };
+  const onColDrop = (targetIdx: number) => {
+    if (dragCol !== null && dragCol !== targetIdx) {
+      setRows(prev => prev.map(r => {
+        const marks = [...r.marks];
+        const [moved] = marks.splice(dragCol, 1);
+        marks.splice(targetIdx, 0, moved);
+        return { ...r, marks };
+      }));
+    }
+    setDragCol(null);
+    setDragOverCol(null);
+  };
+  const onColDragEnd = () => { setDragCol(null); setDragOverCol(null); };
 
   return (
     <div style={{ padding: '28px 24px' }}>
@@ -204,7 +254,6 @@ export default function ScanImport() {
             </button>
           </div>
 
-          {/* Combined visualization */}
           <Card style={{ marginBottom: 20, padding: 12 }}>
             <img
               src={`data:image/png;base64,${scanResult.result_image}`}
@@ -213,7 +262,6 @@ export default function ScanImport() {
             />
           </Card>
 
-          {/* Editable table */}
           <div style={{
             fontSize: 11, fontWeight: 700, color: 'var(--text-muted)',
             letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 8,
@@ -225,14 +273,30 @@ export default function ScanImport() {
               <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 360 }}>
                 <thead>
                   <tr>
-                    <th style={thStyle}> </th>
-					<th style={thStyle}>Habit</th>
+                    {/* grip column header */}
+                    <th style={{ ...thStyle, width: 20, padding: '5px 4px' }} />
+					{/* remove button */}
+					<th style={{ ...thStyle, width: 2, padding: '2px 1px' }} />
+                    <th style={thStyle}>Habit</th>
                     {Array.from({ length: nDataCols }, (_, i) => (
                       <th
                         key={i}
-                        style={{ ...thStyle, width: 40, textAlign: 'center', padding: '5px 4px' }}
+                        draggable
+                        onDragStart={() => onColDragStart(i)}
+                        onDragOver={e => onColDragOver(i, e)}
+                        onDrop={() => onColDrop(i)}
+                        onDragEnd={onColDragEnd}
                         onMouseEnter={() => setHoveredCol(i)}
                         onMouseLeave={() => setHoveredCol(null)}
+                        style={{
+                          ...thStyle,
+                          width: 40, textAlign: 'center', padding: '5px 4px',
+                          cursor: 'grab',
+                          opacity: dragCol === i ? 0.35 : 1,
+                          borderLeft: dragOverCol === i && dragCol !== i
+                            ? '2px solid var(--accent-amber)' : '2px solid transparent',
+                          transition: 'opacity 0.12s, border-color 0.1s',
+                        }}
                       >
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                           <span>{i + 1}</span>
@@ -253,6 +317,7 @@ export default function ScanImport() {
                         </div>
                       </th>
                     ))}
+                    {/* add column */}
                     <th style={{ ...thStyle, width: 32, textAlign: 'center', padding: '5px 4px' }}>
                       <button
                         onClick={handleAddCol}
@@ -268,6 +333,7 @@ export default function ScanImport() {
                         <Icons.Plus size={11} />
                       </button>
                     </th>
+                    {/* delete row column */}
                     <th style={{ ...thStyle, width: 28, padding: '5px 4px' }} />
                   </tr>
                 </thead>
@@ -275,16 +341,32 @@ export default function ScanImport() {
                   {rows.map((row, ri) => (
                     <tr
                       key={ri}
-                      style={{ borderTop: '1px solid var(--border)' }}
+                      draggable
+                      onDragStart={() => onRowDragStart(ri)}
+                      onDragOver={e => onRowDragOver(ri, e)}
+                      onDrop={() => onRowDrop(ri)}
+                      onDragEnd={onRowDragEnd}
                       onMouseEnter={() => setHoveredRow(ri)}
                       onMouseLeave={() => setHoveredRow(null)}
+                      style={{
+                        borderTop: dragOverRow === ri && dragRow !== ri
+                          ? '2px solid var(--accent-amber)'
+                          : '1px solid var(--border)',
+                        opacity: dragRow === ri ? 0.35 : 1,
+                        transition: 'opacity 0.12s',
+                      }}
                     >
-					  <td style={{ padding: '1px', textAlign: 'center' }}>
+                      {/* grip handle */}
+                      <td style={{ padding: '4px 4px', textAlign: 'center', cursor: 'grab', color: 'var(--border-strong)' }}>
+                        <GripIcon />
+                      </td>
+					  {/* delete row */}
+                      <td style={{ padding: '4px', textAlign: 'center' }}>
                         <button
                           onClick={() => handleRemoveRow(ri)}
                           title="Remove row"
                           style={{
-                            width: 15, height: 15, borderRadius: 0,
+                            width: 10, height: 20, borderRadius: 1,
                             border: 'none', background: 'transparent',
                             cursor: 'pointer', display: 'inline-flex',
                             alignItems: 'center', justifyContent: 'center', padding: 0,
@@ -296,7 +378,8 @@ export default function ScanImport() {
                           <Icons.X size={12} />
                         </button>
                       </td>
-                      <td style={{ padding: '5px 8px', minWidth: 130 }}>
+                      {/* habit name */}
+                      <td style={{ padding: '5px 1px', minWidth: 130 }}>
                         <input
                           value={row.habitName}
                           onChange={e => handleNameChange(ri, e.target.value)}
@@ -312,6 +395,7 @@ export default function ScanImport() {
                           onBlur={e => (e.target.style.background = 'transparent')}
                         />
                       </td>
+                      {/* mark toggles */}
                       {row.marks.map((mark, ci) => (
                         <td key={ci} style={{ padding: '4px', textAlign: 'center' }}>
                           <button
@@ -333,13 +417,14 @@ export default function ScanImport() {
                           </button>
                         </td>
                       ))}
+                      {/* aligned with add-col header */}
                       <td />
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
                   <tr style={{ borderTop: '1px solid var(--border)' }}>
-                    <td colSpan={nDataCols + 3} style={{ padding: '5px 8px' }}>
+                    <td colSpan={nDataCols + EXTRA_COLS} style={{ padding: '5px 8px' }}>
                       <button
                         onClick={handleAddRow}
                         style={{
@@ -364,6 +449,19 @@ export default function ScanImport() {
         </>
       )}
     </div>
+  );
+}
+
+function GripIcon() {
+  return (
+    <svg width="8" height="12" viewBox="0 0 8 12" fill="currentColor">
+      <circle cx="2" cy="2" r="1.2" />
+      <circle cx="6" cy="2" r="1.2" />
+      <circle cx="2" cy="6" r="1.2" />
+      <circle cx="6" cy="6" r="1.2" />
+      <circle cx="2" cy="10" r="1.2" />
+      <circle cx="6" cy="10" r="1.2" />
+    </svg>
   );
 }
 
