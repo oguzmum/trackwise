@@ -1,9 +1,9 @@
-import { useCallback, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Card } from '../components/ui';
 import { Icons } from '../components/Icons';
 import type { ScanResult, Habit } from '../types';
-import { scanImage, getHabits } from '../api';
+import { scanImage, getHabits, createHabit, bulkCreateEntries } from '../api';
 
 interface TableRow {
   habitName: string;
@@ -24,6 +24,12 @@ export default function ScanImport() {
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [rows, setRows] = useState<TableRow[]>([]);
   const [habits, setHabits] = useState<Habit[]>([]);
+  const [importMonth, setImportMonth] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [saving, setSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -39,7 +45,10 @@ export default function ScanImport() {
 
   const nDataCols = rows[0]?.marks.length ?? 0;
 
-  const processFile = useCallback(async (file: File) => {
+  const [_y, _m] = importMonth.split('-').map(Number);
+  const daysInMonth = new Date(_y, _m, 0).getDate();
+
+  const processFile = async (file: File) => {
     setError(null);
     setPreviewUrl(URL.createObjectURL(file));
     setPhase('loading');
@@ -48,10 +57,12 @@ export default function ScanImport() {
       setHabits(fetchedHabits);
       setScanResult(result);
       if (result.success) {
+        const [y, m] = importMonth.split('-').map(Number);
+        const days = new Date(y, m, 0).getDate();
         setRows(
           result.habit_names.map((name, i) => ({
             habitName: name,
-            marks: result.marks_matrix[i] ?? [],
+            marks: (result.marks_matrix[i] ?? []).slice(0, days),
             ...fuzzyMatch(name, fetchedHabits),
           }))
         );
@@ -64,25 +75,26 @@ export default function ScanImport() {
       setError(e instanceof Error ? e.message : 'Upload failed');
       setPhase('upload');
     }
-  }, []);
+  };
 
-  const handleFileChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file) processFile(file);
-      e.target.value = '';
-    },
-    [processFile]
-  );
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) processFile(file);
+    e.target.value = '';
+  };
 
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      const file = e.dataTransfer.files?.[0];
-      if (file) processFile(file);
-    },
-    [processFile]
-  );
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file) processFile(file);
+  };
+
+  const handleMonthChange = (newMonth: string) => {
+    setImportMonth(newMonth);
+    const [y, m] = newMonth.split('-').map(Number);
+    const days = new Date(y, m, 0).getDate();
+    setRows(prev => prev.map(r => ({ ...r, marks: r.marks.slice(0, days) })));
+  };
 
   const handleNameChange = (rowIdx: number, name: string) => {
     setRows(prev => prev.map((currentRow, index) =>
@@ -94,6 +106,46 @@ export default function ScanImport() {
     setRows(prev => prev.map((currentRow, index) =>
       index === rowIdx ? { ...currentRow, matchedHabitId: habitId, matchStatus: habitId === null ? 'new' : 'matched' } : currentRow
     ));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    setSaveSuccess(false);
+    setError(null);
+    try {
+      const [year, month] = importMonth.split('-').map(Number);
+
+      const resolvedRows = await Promise.all(
+        rows.map(async (row) => {
+          if (row.matchedHabitId !== null || !row.habitName.trim()) return row;
+          const newHabit = await createHabit({ name: row.habitName.trim(), frequency: 'daily' });
+          return { ...row, matchedHabitId: newHabit.id, matchStatus: 'matched' as const };
+        })
+      );
+      setRows(resolvedRows);
+
+      const entries: Array<{ habit_id: number; date: string; completed: boolean }> = [];
+      for (const row of resolvedRows) {
+        if (!row.matchedHabitId) continue;
+        for (let ci = 0; ci < row.marks.length; ci++) {
+          const day = ci + 1;
+          // Skip invalid days (e.g. day 31 in a 30-day month)
+          if (new Date(year, month - 1, day).getMonth() !== month - 1) continue;
+          entries.push({
+            habit_id: row.matchedHabitId,
+            date: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
+            completed: row.marks[ci],
+          });
+        }
+      }
+
+      await bulkCreateEntries(entries);
+      setSaveSuccess(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Save failed');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleMarkToggle = (rowIdx: number, colIdx: number) => {
@@ -120,6 +172,7 @@ export default function ScanImport() {
   };
 
   const handleAddCol = () => {
+    if (nDataCols >= daysInMonth) return;
     setRows(prev => prev.map(r => ({ ...r, marks: [...r.marks, false] })));
   };
 
@@ -253,13 +306,29 @@ export default function ScanImport() {
 
       {phase === 'result' && scanResult && (
         <>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-              <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{rows.length}</span> habits ·{' '}
-              <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{nDataCols}</span> days detected
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{rows.length}</span> habits ·{' '}
+                <span style={{ color: nDataCols > daysInMonth ? 'var(--accent-coral)' : 'var(--text-secondary)', fontWeight: 600 }}>{nDataCols}</span>
+                <span style={{ color: 'var(--text-muted)' }}> / {daysInMonth} days</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Month</span>
+                <input
+                  type="month"
+                  value={importMonth}
+                  onChange={e => handleMonthChange(e.target.value)}
+                  style={{
+                    background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
+                    color: 'var(--text-primary)', borderRadius: 7, padding: '4px 8px',
+                    fontSize: 12, fontFamily: 'inherit', outline: 'none', cursor: 'pointer',
+                  }}
+                />
+              </div>
             </div>
             <button
-              onClick={() => { setPhase('upload'); setScanResult(null); setRows([]); setPreviewUrl(null); }}
+              onClick={() => { setPhase('upload'); setScanResult(null); setRows([]); setPreviewUrl(null); setSaveSuccess(false); }}
               style={{ ...btnStyle, fontSize: 12 }}
             >
               <Icons.X size={13} />
@@ -334,13 +403,16 @@ export default function ScanImport() {
                     <th style={{ ...thStyle, width: 32, textAlign: 'center', padding: '5px 4px' }}>
                       <button
                         onClick={handleAddCol}
-                        title="Add column"
+                        disabled={nDataCols >= daysInMonth}
+                        title={nDataCols >= daysInMonth ? `Max ${daysInMonth} days for this month` : 'Add column'}
                         style={{
                           width: 20, height: 20, borderRadius: 5,
                           border: '1.5px dashed var(--border-strong)',
                           background: 'transparent', color: 'var(--text-muted)',
-                          cursor: 'pointer', display: 'inline-flex',
-                          alignItems: 'center', justifyContent: 'center', padding: 0,
+                          cursor: nDataCols >= daysInMonth ? 'not-allowed' : 'pointer',
+                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 0,
+                          opacity: nDataCols >= daysInMonth ? 0.3 : 1,
+                          transition: 'opacity 0.12s',
                         }}
                       >
                         <Icons.Plus size={11} />
@@ -478,6 +550,48 @@ export default function ScanImport() {
               </table>
             </div>
           </Card>
+
+          {saveSuccess && (
+            <div style={{
+              marginTop: 14, padding: '10px 14px', borderRadius: 10,
+              background: 'color-mix(in srgb, var(--accent-sage) 12%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--accent-sage) 35%, transparent)',
+              color: 'var(--accent-sage)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8,
+            }}>
+              <Icons.Check size={15} />
+              Saved! All habits and entries have been written to the database.
+            </div>
+          )}
+
+          <div style={{ marginTop: 14, display: 'flex', justifyContent: 'flex-end' }}>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 7,
+                padding: '9px 18px', borderRadius: 9,
+                border: 'none',
+                background: saving ? 'var(--bg-elevated)' : 'var(--accent-amber)',
+                color: saving ? 'var(--text-muted)' : '#fff',
+                cursor: saving ? 'not-allowed' : 'pointer',
+                fontFamily: 'inherit', fontSize: 13, fontWeight: 700,
+                transition: 'opacity 0.15s',
+                opacity: saving ? 0.7 : 1,
+              }}
+            >
+              {saving ? (
+                <>
+                  <MiniSpinner />
+                  Saving…
+                </>
+              ) : (
+                <>
+                  <Icons.Check size={14} />
+                  Save to Database
+                </>
+              )}
+            </button>
+          </div>
         </>
       )}
     </div>
@@ -521,6 +635,16 @@ function MatchDot({ status }: { status: 'matched' | 'partial' | 'new' }) {
     <span title="New habit will be created" style={{ color: 'var(--text-muted)', display: 'inline-flex', flexShrink: 0 }}>
       <Icons.Plus size={11} />
     </span>
+  );
+}
+
+function MiniSpinner() {
+  return (
+    <svg width={14} height={14} viewBox="0 0 14 14"
+      style={{ animation: 'spin 0.9s linear infinite', display: 'block', flexShrink: 0 }}>
+      <circle cx={7} cy={7} r={5} fill="none" stroke="currentColor" strokeWidth={2} strokeOpacity={0.3} />
+      <path d="M7 2 A5 5 0 0 1 12 7" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
+    </svg>
   );
 }
 

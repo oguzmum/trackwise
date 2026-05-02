@@ -39,6 +39,9 @@ export const upsertEntry = (data: { habit_id: number; date: string; completed: b
 export const patchEntry = (id: number, data: { completed?: boolean; note?: string }) =>
   req<Entry>('PATCH', `/entries/${id}`, data);
 
+export const bulkCreateEntries = (entries: Array<{ habit_id: number; date: string; completed: boolean }>) =>
+  req<Entry[]>('POST', '/entries/bulk', { entries });
+
 export const scanImage = async (file: File): Promise<ScanResult> => {
   const fd = new FormData();
   fd.append('file', file);
