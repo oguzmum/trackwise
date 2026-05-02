@@ -79,6 +79,25 @@ export default function ScanImport() {
     );
   };
 
+  const handleRemoveRow = (rowIdx: number) => {
+    setRows(prev => prev.filter((_, i) => i !== rowIdx));
+  };
+
+  const handleRemoveCol = (colIdx: number) => {
+    setRows(prev => prev.map(r => ({ ...r, marks: r.marks.filter((_, i) => i !== colIdx) })));
+  };
+
+  const handleAddRow = () => {
+    setRows(prev => [...prev, { habitName: '', marks: Array(nDataCols).fill(false) }]);
+  };
+
+  const handleAddCol = () => {
+    setRows(prev => prev.map(r => ({ ...r, marks: [...r.marks, false] })));
+  };
+
+  const [hoveredCol, setHoveredCol] = useState<number | null>(null);
+  const [hoveredRow, setHoveredRow] = useState<number | null>(null);
+
   const nDataCols = rows[0]?.marks.length ?? 0;
 
   return (
@@ -206,17 +225,77 @@ export default function ScanImport() {
               <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 360 }}>
                 <thead>
                   <tr>
-                    <th style={thStyle}>Habit</th>
+                    <th style={thStyle}> </th>
+					<th style={thStyle}>Habit</th>
                     {Array.from({ length: nDataCols }, (_, i) => (
-                      <th key={i} style={{ ...thStyle, width: 34, textAlign: 'center', padding: '8px 4px' }}>
-                        {i + 1}
+                      <th
+                        key={i}
+                        style={{ ...thStyle, width: 40, textAlign: 'center', padding: '5px 4px' }}
+                        onMouseEnter={() => setHoveredCol(i)}
+                        onMouseLeave={() => setHoveredCol(null)}
+                      >
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                          <span>{i + 1}</span>
+                          <button
+                            onClick={() => handleRemoveCol(i)}
+                            title="Remove column"
+                            style={{
+                              width: 14, height: 14, borderRadius: 3, border: 'none',
+                              background: 'transparent', padding: 0, cursor: 'pointer',
+                              opacity: hoveredCol === i ? 1 : 0,
+                              transition: 'opacity 0.12s',
+                              color: 'var(--accent-coral)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}
+                          >
+                            <Icons.X size={10} />
+                          </button>
+                        </div>
                       </th>
                     ))}
+                    <th style={{ ...thStyle, width: 32, textAlign: 'center', padding: '5px 4px' }}>
+                      <button
+                        onClick={handleAddCol}
+                        title="Add column"
+                        style={{
+                          width: 20, height: 20, borderRadius: 5,
+                          border: '1.5px dashed var(--border-strong)',
+                          background: 'transparent', color: 'var(--text-muted)',
+                          cursor: 'pointer', display: 'inline-flex',
+                          alignItems: 'center', justifyContent: 'center', padding: 0,
+                        }}
+                      >
+                        <Icons.Plus size={11} />
+                      </button>
+                    </th>
+                    <th style={{ ...thStyle, width: 28, padding: '5px 4px' }} />
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((row, ri) => (
-                    <tr key={ri} style={{ borderTop: '1px solid var(--border)' }}>
+                    <tr
+                      key={ri}
+                      style={{ borderTop: '1px solid var(--border)' }}
+                      onMouseEnter={() => setHoveredRow(ri)}
+                      onMouseLeave={() => setHoveredRow(null)}
+                    >
+					  <td style={{ padding: '1px', textAlign: 'center' }}>
+                        <button
+                          onClick={() => handleRemoveRow(ri)}
+                          title="Remove row"
+                          style={{
+                            width: 15, height: 15, borderRadius: 0,
+                            border: 'none', background: 'transparent',
+                            cursor: 'pointer', display: 'inline-flex',
+                            alignItems: 'center', justifyContent: 'center', padding: 0,
+                            opacity: hoveredRow === ri ? 1 : 0,
+                            transition: 'opacity 0.12s',
+                            color: 'var(--accent-coral)',
+                          }}
+                        >
+                          <Icons.X size={12} />
+                        </button>
+                      </td>
                       <td style={{ padding: '5px 8px', minWidth: 130 }}>
                         <input
                           value={row.habitName}
@@ -254,9 +333,31 @@ export default function ScanImport() {
                           </button>
                         </td>
                       ))}
+                      <td />
                     </tr>
                   ))}
                 </tbody>
+                <tfoot>
+                  <tr style={{ borderTop: '1px solid var(--border)' }}>
+                    <td colSpan={nDataCols + 3} style={{ padding: '5px 8px' }}>
+                      <button
+                        onClick={handleAddRow}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 5,
+                          background: 'transparent', border: 'none',
+                          color: 'var(--text-muted)', cursor: 'pointer',
+                          fontSize: 12, fontWeight: 600, padding: '2px 4px',
+                          borderRadius: 5, fontFamily: 'inherit',
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
+                        onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+                      >
+                        <Icons.Plus size={12} />
+                        Add row
+                      </button>
+                    </td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
           </Card>
