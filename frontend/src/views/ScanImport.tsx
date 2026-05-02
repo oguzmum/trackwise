@@ -2,12 +2,14 @@ import { useCallback, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Card } from '../components/ui';
 import { Icons } from '../components/Icons';
-import type { ScanResult } from '../types';
-import { scanImage } from '../api';
+import type { ScanResult, Habit } from '../types';
+import { scanImage, getHabits } from '../api';
 
 interface TableRow {
   habitName: string;
   marks: boolean[];
+  matchedHabitId: number | null;
+  matchStatus: 'matched' | 'partial' | 'new';
 }
 
 type Phase = 'upload' | 'loading' | 'result';
@@ -21,6 +23,7 @@ export default function ScanImport() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [rows, setRows] = useState<TableRow[]>([]);
+  const [habits, setHabits] = useState<Habit[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -41,13 +44,15 @@ export default function ScanImport() {
     setPreviewUrl(URL.createObjectURL(file));
     setPhase('loading');
     try {
-      const result = await scanImage(file);
+      const [result, fetchedHabits] = await Promise.all([scanImage(file), getHabits(true)]);
+      setHabits(fetchedHabits);
       setScanResult(result);
       if (result.success) {
         setRows(
           result.habit_names.map((name, i) => ({
             habitName: name,
             marks: result.marks_matrix[i] ?? [],
+            ...fuzzyMatch(name, fetchedHabits),
           }))
         );
         setPhase('result');
@@ -80,7 +85,15 @@ export default function ScanImport() {
   );
 
   const handleNameChange = (rowIdx: number, name: string) => {
-    setRows(prev => prev.map((r, i) => (i === rowIdx ? { ...r, habitName: name } : r)));
+    setRows(prev => prev.map((currentRow, index) =>
+      index === rowIdx ? { ...currentRow, habitName: name, ...fuzzyMatch(name, habits) } : currentRow
+    ));
+  };
+
+  const handleMatchChange = (rowIdx: number, habitId: number | null) => {
+    setRows(prev => prev.map((currentRow, index) =>
+      index === rowIdx ? { ...currentRow, matchedHabitId: habitId, matchStatus: habitId === null ? 'new' : 'matched' } : currentRow
+    ));
   };
 
   const handleMarkToggle = (rowIdx: number, colIdx: number) => {
@@ -103,7 +116,7 @@ export default function ScanImport() {
   };
 
   const handleAddRow = () => {
-    setRows(prev => [...prev, { habitName: '', marks: Array(nDataCols).fill(false) }]);
+    setRows(prev => [...prev, { habitName: '', marks: Array(nDataCols).fill(false), matchedHabitId: null, matchStatus: 'new' }]);
   };
 
   const handleAddCol = () => {
@@ -378,8 +391,8 @@ export default function ScanImport() {
                           <Icons.X size={12} />
                         </button>
                       </td>
-                      {/* habit name */}
-                      <td style={{ padding: '5px 1px', minWidth: 130 }}>
+                      {/* habit name + match */}
+                      <td style={{ padding: '4px 1px', minWidth: 170 }}>
                         <input
                           value={row.habitName}
                           onChange={e => handleNameChange(ri, e.target.value)}
@@ -394,6 +407,25 @@ export default function ScanImport() {
                           onFocus={e => (e.target.style.background = 'var(--bg-elevated)')}
                           onBlur={e => (e.target.style.background = 'transparent')}
                         />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, paddingLeft: 5, marginTop: 2 }}>
+                          <MatchDot status={row.matchStatus} />
+                          <select
+                            value={row.matchedHabitId ?? ''}
+                            onChange={e => handleMatchChange(ri, e.target.value !== '' ? Number(e.target.value) : null)}
+                            style={{
+                              background: 'var(--bg-base)', border: 'none',
+                              color: row.matchStatus === 'new' ? 'var(--text-muted)' : 'var(--text-secondary)',
+                              fontFamily: 'inherit', fontSize: 11,
+                              cursor: 'pointer', outline: 'none',
+                              maxWidth: 150, padding: '1px 2px', borderRadius: 3,
+                            }}
+                          >
+                            <option value="">New habit</option>
+                            {habits.map(h => (
+                              <option key={h.id} value={h.id}>{h.name}</option>
+                            ))}
+                          </select>
+                        </div>
                       </td>
                       {/* mark toggles */}
                       {row.marks.map((mark, ci) => (
@@ -449,6 +481,46 @@ export default function ScanImport() {
         </>
       )}
     </div>
+  );
+}
+
+function fuzzyMatch(name: string, habits: Habit[]): { matchedHabitId: number | null; matchStatus: 'matched' | 'partial' | 'new' } {
+  const normalize = (s: string) => s.toLowerCase().trim().replace(/\s+/g, ' ');
+  const searchTerm = normalize(name);
+  if (!searchTerm) return { matchedHabitId: null, matchStatus: 'new' };
+
+  const exact = habits.find(habit => normalize(habit.name) === searchTerm);
+  if (exact) return { matchedHabitId: exact.id, matchStatus: 'matched' };
+
+  const partial = habits.find(habit => {
+    const habitName = normalize(habit.name);
+    return habitName.includes(searchTerm) || searchTerm.includes(habitName);
+  });
+  if (partial) return { matchedHabitId: partial.id, matchStatus: 'partial' };
+
+  return { matchedHabitId: null, matchStatus: 'new' };
+}
+
+function MatchDot({ status }: { status: 'matched' | 'partial' | 'new' }) {
+  if (status === 'matched') {
+    return (
+      <span title="Matched existing habit" style={{ color: 'var(--accent-sage)', display: 'inline-flex', flexShrink: 0 }}>
+        <Icons.Check size={11} />
+      </span>
+    );
+  }
+  if (status === 'partial') {
+    return (
+      <span title="Possible match - please confirm" style={{
+        color: 'var(--accent-amber)', fontSize: 11, fontWeight: 800,
+        lineHeight: 1, flexShrink: 0, userSelect: 'none',
+      }}>~</span>
+    );
+  }
+  return (
+    <span title="New habit will be created" style={{ color: 'var(--text-muted)', display: 'inline-flex', flexShrink: 0 }}>
+      <Icons.Plus size={11} />
+    </span>
   );
 }
 
