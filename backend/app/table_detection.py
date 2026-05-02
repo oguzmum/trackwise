@@ -110,6 +110,19 @@ def detect_grid_lines(binary: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     return h_lines, v_lines
 
 
+def fix_missing_left_border(col_positions: list[int]) -> list[int]:
+    """Returns col_positions with a virtual x=0 border when the table has no left border (habit-name column is open on the left).
+    Heuristic: if the first column width is less than the average width *2 of the remaining columns, the first detected line is the habit/day separator
+    """
+    if len(col_positions) < 3:
+        return col_positions
+    first_col_width = col_positions[1] - col_positions[0]
+    avg_remaining_width = (col_positions[-1] - col_positions[1]) / max(1, len(col_positions) - 2)
+    if avg_remaining_width > 0 and first_col_width < avg_remaining_width * 2.0:
+        return [0] + col_positions
+    return col_positions
+
+
 def extract_line_positions(line_mask: np.ndarray, axis: int, min_gap: int = 10) -> list[int]:
     # count all pixels on the axis (divide by 255 to get the actual pixel count (white 255, black 0), the sum counts the intensity, not the pixel value)
     projection = line_mask.sum(axis=axis) / 255
@@ -212,16 +225,7 @@ def detect_table_pipeline(image_path: str | Path, max_image_dim: int = 1800, min
             ),
         )
 
-    # If the table has no left border, the first detected vertical line is the
-    # separator between habit names and day 1 — not the table's left edge.
-    # Heuristic: if the first column is not significantly wider than the average
-    # of the remaining columns, there is no habit-name column with a left border,
-    # so we inject a virtual left boundary at x=0.
-    if len(col_positions) >= 3:
-        first_col_width = col_positions[1] - col_positions[0]
-        avg_remaining_width = (col_positions[-1] - col_positions[1]) / max(1, len(col_positions) - 2)
-        if avg_remaining_width > 0 and first_col_width < avg_remaining_width * 2.0:
-            col_positions.insert(0, 0)
+    col_positions = fix_missing_left_border(col_positions)
 
     n_rows = len(row_positions) - 1
     n_cols = len(col_positions) - 1
