@@ -102,18 +102,12 @@ def detect_grid_lines(binary: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     v_size = max(h // 30, 20)
     v_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, v_size))
     v_lines = cv2.morphologyEx(binary_closed, cv2.MORPH_OPEN, v_kernel)
-    
-    # add some more pixels to the line (make them thicker)
-    # h_lines = cv2.dilate(h_lines, np.ones((3, 3), np.uint8), iterations=1)
-    # v_lines = cv2.dilate(v_lines, np.ones((3, 3), np.uint8), iterations=1)
 
     return h_lines, v_lines
 
 
 def fix_missing_left_border(col_positions: list[int]) -> list[int]:
-    """Returns col_positions with a virtual x=0 border when the table has no left border (habit-name column is open on the left).
-    Heuristic: if the first column width is less than the average width *2 of the remaining columns, the first detected line is the habit/day separator
-    """
+    # Returns col_positions with a virtual x=0 border when the table has no left border (habit-name column is open on the left)
     if len(col_positions) < 3:
         return col_positions
     first_col_width = col_positions[1] - col_positions[0]
@@ -124,7 +118,7 @@ def fix_missing_left_border(col_positions: list[int]) -> list[int]:
 
 
 def extract_line_positions(line_mask: np.ndarray, axis: int, min_gap: int = 10) -> list[int]:
-    # count all pixels on the axis (divide by 255 to get the actual pixel count (white 255, black 0), the sum counts the intensity, not the pixel value)
+    # count all pixels on the axis (divide by 255 to get the actual pixel count (white 255, black 0 - not 1 and 0 as it's not binarized)
     projection = line_mask.sum(axis=axis) / 255
     line_length_max = line_mask.shape[axis] 
     threshold = line_length_max * 0.26 # TODO maybe calucate this dynamically
@@ -141,7 +135,6 @@ def extract_line_positions(line_mask: np.ndarray, axis: int, min_gap: int = 10) 
         else:
             i += 1
 
-    # Merge positions closer than min_gap
     merged: list[int] = []
     for p in raw:
         if not merged or p - merged[-1] > min_gap:
@@ -185,7 +178,6 @@ def detect_mark_in_cell(cell_img: np.ndarray) -> tuple[bool, float, list]:
             if 20 < angle < 75:
                 valid_lines.append((x1, y1, x2, y2))
 
-    # Confidence = total detected diagonal length / half cell diagonal
     cell_diag = math.hypot(h, w)
     total_len = sum(math.hypot(x2 - x1, y2 - y1) for x1, y1, x2, y2 in valid_lines)
     confidence = min(1.0, total_len / (cell_diag * 0.5))
@@ -278,7 +270,6 @@ def extract_habit_names(img: np.ndarray, row_positions: list[int], col_positions
         if cell.size == 0 or cell.shape[0] < 5 or cell.shape[1] < 5:
             names.append("")
             continue
-
 
 		# PreCheck if the cell is even "readable" (enoguh black density)
         gray_cell = cv2.cvtColor(cell, cv2.COLOR_BGR2GRAY) if len(cell.shape) == 3 else cell
