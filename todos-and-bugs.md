@@ -23,7 +23,7 @@
 - [ ] have an archive of used images and it's outcomes - also make it editable afterwards
 
 ## Deployment
-- [ ] create docker files to run the app as docker container
+- [x] create docker files to run the app as docker container
 - [ ] create github actions to create a new docker image on every push
 
 ---
