@@ -1,6 +1,6 @@
 services:
   trackwise:
-    image: trackwise:latest
+    image: ghcr.io/oguzmum/trackwise:latest
     ports:
       - "8080:8000"
     volumes:
