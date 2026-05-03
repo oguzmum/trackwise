@@ -1,0 +1,17 @@
+node_modules
+packages/*/node_modules
+packages/*/dist
+backend/.venv
+backend/**/__pycache__
+backend/**/*.pyc
+backend/tests
+.git
+.github
+design
+npm-debug.log
+README.md
+ARCHITECTURE.md
+ToDos-and-Bugs.md
+.vscode
+.claude
+tracker-table-images

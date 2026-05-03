@@ -1,0 +1,13 @@
+services:
+  trackwise:
+    image: trackwise:latest
+    ports:
+      - "8080:8000"
+    volumes:
+      - db_data:/data
+    environment:
+      - DATABASE_URL=sqlite:////data/trackwise.db
+    restart: unless-stopped
+
+volumes:
+  db_data:
