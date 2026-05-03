@@ -43,6 +43,13 @@ cd backend
 pytest
 ```
 
+### Docker
+
+```bash
+docker build -f docker/Dockerfile -t trackwise .
+
+docker compose up -d
+```
 ---
 
 Built with the help of [Claude Code](https://claude.ai/code) and [Claude Design](https://claude.ai).
