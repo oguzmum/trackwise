@@ -13,7 +13,7 @@
   - [ ] warp perspective - Correct lens distortion which cause curved lines and a slightly ditorted table in general
 
 ## Table after scan
-- [ ] When a habit is selected in the drop down menu, replace the habit name in the table text field
+- [x] When a habit is selected in the drop down menu, replace the habit name in the table text field
 - [x] save the habit entries in the db
 - [x] if the habit is not yet in the DB, create a new one (or at least give a dialog where the user can manually adjust some things)
 - [x] match the month and year for which the scanned image should be applied

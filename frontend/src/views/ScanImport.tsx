@@ -103,9 +103,16 @@ export default function ScanImport() {
   };
 
   const handleMatchChange = (rowIdx: number, habitId: number | null) => {
-    setRows(prev => prev.map((currentRow, index) =>
-      index === rowIdx ? { ...currentRow, matchedHabitId: habitId, matchStatus: habitId === null ? 'new' : 'matched' } : currentRow
-    ));
+    setRows(prev => prev.map((currentRow, index) => {
+      if (index !== rowIdx) return currentRow;
+      const selectedHabit = habitId !== null ? habits.find(h => h.id === habitId) : null;
+      return {
+        ...currentRow,
+        matchedHabitId: habitId,
+        matchStatus: habitId === null ? 'new' : 'matched',
+        ...(selectedHabit ? { habitName: selectedHabit.name } : {}),
+      };
+    }));
   };
 
   const handleSave = async () => {
