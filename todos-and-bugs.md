@@ -24,7 +24,10 @@
 
 ## Deployment
 - [x] create docker files to run the app as docker container
-- [ ] create github actions to create a new docker image on every push
+- [x] create github actions to build a new docker image on every push
+
+## Misc
+- [ ] Icon for the tab thats open in the browser
 
 ---
 
