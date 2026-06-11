@@ -18,7 +18,7 @@
 - [x] if the habit is not yet in the DB, create a new one (or at least give a dialog where the user can manually adjust some things)
 - [x] match the month and year for which the scanned image should be applied
   - [x] also limit the days that can be added accordingly
-- [ ] Dynamically get if there is a sum column, if not keep all columns (currently one column gets deleted as it assumesthe table has a sum column)
+- [x] Dynamically get if there is a sum column, if not keep all columns (currently one column gets deleted as it assumesthe table has a sum column)
 
 ## Scanned Images
 - [ ] have an archive of used images and it's outcomes - also make it editable afterwards
