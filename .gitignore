@@ -46,3 +46,6 @@ tracker-table-images/*
 !tracker-table-images/photo-edited*
 !tracker-table-images/example-tracker*
 !tracker-table-images/screenshot*
+
+#drawio
+*.bkp

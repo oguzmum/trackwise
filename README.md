@@ -2,7 +2,7 @@
 
 A personal habit tracking web app with statistics and visual insights.
 
-## Idea 
+## Idea
 
 - Track daily habits across custom categories (fitness, learning, health, etc.)
 - Monthly grid view inspired by paper habit trackers
@@ -32,6 +32,7 @@ API docs available at [http://localhost:8000/docs](http://localhost:8000/docs).
 DB (`trackwise.db`) is created automatically on first start.
 
 **Frontend**
+
 ```bash
 cd frontend && npm run dev
 ```
@@ -50,6 +51,7 @@ docker build -f docker/Dockerfile -t trackwise .
 
 docker compose up -d
 ```
+
 ---
 
 Built with the help of [Claude Code](https://claude.ai/code) and [Claude Design](https://claude.ai).
